@@ -2,35 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'supplier_id',
-        'category_id',
-        'reference',
+        'supplier_name',
+        'category_name',
         'amount',
-        'issue_date',
         'due_date',
         'status',
-        'paid_at',
-        'notes',
+        'paid_at'
     ];
-
-    protected $casts = [
-        'issue_date' => 'date',
-        'due_date' => 'date',
-        'paid_at' => 'datetime',
-    ];
-
-    public function supplier()
-    {
-        return $this->belongsTo(Supplier::class);
-    }
-
-    public function category()
-    {
-        return $this->belongsTo(Category::class);
-    }
 }

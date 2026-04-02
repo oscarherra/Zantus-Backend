@@ -5,68 +5,61 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CashSession;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class CashSessionController extends Controller
 {
     public function today(Request $request)
     {
-        $date = Carbon::today()->toDateString();
-        $cash = CashSession::where('user_id', $request->user()->id)
-            ->where('date', $date)
-            ->with('transactions')
-            ->first();
+        $cash = CashSession::whereDate('opened_at', now()->toDateString())
+                           ->latest('id')
+                           ->first();
 
         return response()->json(['cash_session' => $cash]);
     }
 
     public function open(Request $request)
     {
-        $data = $request->validate([
-            'opening_amount' => ['required','numeric','min:0'],
+        $request->validate([
+            'opening_amount' => 'required|numeric|min:0',
         ]);
 
-        $date = Carbon::today()->toDateString();
+        $existing = CashSession::where('status', 'open')->first();
 
-        $cash = CashSession::firstOrCreate(
-            ['user_id' => $request->user()->id, 'date' => $date],
+        if ($existing) {
+            return response()->json([
+                'message' => 'Ya existe una caja abierta en este momento. Ciérrela primero.'
+            ], 400);
+        }
+
+        $cash = CashSession::updateOrCreate(
             [
-                'opening_amount' => $data['opening_amount'],
-                'status' => 'open',
-                'opened_at' => now(),
+                'user_id' => $request->user()->id,
+                'date'    => now()->toDateString(),
+            ],
+            [
+                'opened_at'      => now(),
+                'opening_amount' => $request->opening_amount,
+                'status'         => 'open',
             ]
         );
-
-        // Si existía pero estaba cerrada, no reabrimos en MVP:
-        if ($cash->status === 'closed') {
-            return response()->json(['message' => 'La caja de hoy ya está cerrada'], 409);
-        }
-
-        // Si existía y estaba open, actualizamos opening si estaba 0:
-        if ($cash->opening_amount == 0) {
-            $cash->update(['opening_amount' => $data['opening_amount']]);
-        }
 
         return response()->json(['cash_session' => $cash]);
     }
 
     public function close(Request $request, CashSession $cashSession)
     {
-        if ($cashSession->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'No autorizado'], 403);
-        }
-        if ($cashSession->status === 'closed') {
-            return response()->json(['message' => 'Caja ya cerrada'], 409);
-        }
-
-        $data = $request->validate([
-            'closing_amount' => ['required','numeric','min:0'],
+        $request->validate([
+            'closing_amount' => 'required|numeric|min:0',
         ]);
 
+        if ($cashSession->status !== 'open') {
+            return response()->json(['message' => 'Esta caja ya está cerrada'], 400);
+        }
+
         $cashSession->update([
-            'closing_amount' => $data['closing_amount'],
-            'status' => 'closed',
-            'closed_at' => now(),
+            'closed_at'      => now(),
+            'closing_amount' => $request->closing_amount,
+            'status'         => 'closed',
         ]);
 
         return response()->json(['cash_session' => $cashSession]);

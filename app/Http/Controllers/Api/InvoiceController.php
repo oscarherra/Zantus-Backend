@@ -5,75 +5,58 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class InvoiceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Invoice::with(['supplier', 'category'])->orderBy('due_date');
+        $query = Invoice::query()->orderBy('due_date', 'asc');
 
-        if ($request->filled('status')) {
+        if ($request->has('status') && $request->status !== '') {
             $query->where('status', $request->status);
         }
 
-        $invoices = $query->paginate(20);
-
-        return response()->json(['invoices' => $invoices]);
+        return response()->json([
+            'invoices' => $query->paginate(50)
+        ]);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'supplier_id' => ['nullable', 'exists:suppliers,id'],
-            'category_id' => ['nullable', 'exists:categories,id'],
-            'reference' => ['nullable', 'string', 'max:100'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'issue_date' => ['nullable', 'date'],
-            'due_date' => ['required', 'date'],
-            'notes' => ['nullable', 'string'],
+        $request->validate([
+            'supplier_name' => 'required|string|max:255',
+            'category_name' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0.01',
+            'due_date' => 'required|date',
         ]);
 
-        $invoice = Invoice::create($data);
+        $invoice = Invoice::create([
+            'supplier_name' => $request->supplier_name,
+            'category_name' => $request->category_name,
+            'amount' => $request->amount,
+            'due_date' => $request->due_date,
+            'status' => 'pending',
+        ]);
 
-        return response()->json(['invoice' => $invoice], 201);
+        return response()->json(['invoice' => $invoice]);
     }
 
-    public function pay(Request $request, Invoice $invoice)
+    public function pay(Invoice $invoice)
     {
-        if ($invoice->status === 'paid') {
-            return response()->json(['message' => 'La factura ya está pagada'], 409);
-        }
-
         $invoice->update([
             'status' => 'paid',
             'paid_at' => now(),
         ]);
 
-        return response()->json(['invoice' => $invoice->load(['supplier', 'category'])]);
-    }
-
-    public function upcoming(Request $request)
-    {
-        $days = (int) $request->query('days', 7);
-        $today = Carbon::today();
-        $limit = $today->copy()->addDays($days);
-
-        $invoices = Invoice::with(['supplier', 'category'])
-            ->where('status', 'pending')
-            ->whereBetween('due_date', [$today, $limit])
-            ->orderBy('due_date')
-            ->get();
-
-        return response()->json(['invoices' => $invoices]);
+        return response()->json(['invoice' => $invoice]);
     }
 
     public function refreshStatuses()
     {
         Invoice::where('status', 'pending')
-            ->whereDate('due_date', '<', now()->toDateString())
-            ->update(['status' => 'overdue']);
+               ->where('due_date', '<', now()->toDateString())
+               ->update(['status' => 'overdue']);
 
-        return response()->json(['message' => 'Estados actualizados']);
+        return response()->json(['message' => 'Statuses updated successfully']);
     }
 }
