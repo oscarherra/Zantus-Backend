@@ -1,4 +1,12 @@
-FROM richarvey/nginx-php-fpm:latest
+FROM php:8.2-cli
+
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
@@ -8,6 +16,6 @@ RUN composer install --no-dev --optimize-autoloader
 
 RUN chmod -R 775 storage bootstrap/cache
 
-ENV WEBROOT=/var/www/html/public
+EXPOSE 10000
 
-CMD ["/start.sh"]
+CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-10000}"]
