@@ -9,9 +9,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CashSession extends Model
 {
     protected $fillable = [
-        'user_id', 'date', 'opening_amount', 'closing_amount',
-        'status', 'opened_at', 'closed_at'
-    ];
+    'user_id',
+    'date',
+    'opening_amount',
+    'closing_amount',
+    'expected_amount',
+    'difference_amount',
+    'status',
+    'opened_at',
+    'closed_at',
+];
 
     protected $casts = [
         'date' => 'date',

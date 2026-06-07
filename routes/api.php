@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InvoiceController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\ShoppingItemController;
+use App\Http\Controllers\Api\CreditController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,33 +26,86 @@ Route::post('/login', [AuthController::class, 'login']);
 */
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth
+    /*
+    |--------------------------------------------------------------------------
+    | Auth
+    |--------------------------------------------------------------------------
+    */
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Caja
-    Route::get('/cash-sessions/today', [CashSessionController::class, 'today']);
+    /*
+    |--------------------------------------------------------------------------
+    | Caja
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/cash-sessions', [CashSessionController::class, 'index']);
+    Route::get('/cash-sessions/current', [CashSessionController::class, 'current']);
     Route::post('/cash-sessions/open', [CashSessionController::class, 'open']);
     Route::post('/cash-sessions/{cashSession}/close', [CashSessionController::class, 'close']);
 
-    // Transacciones
+    /*
+    |--------------------------------------------------------------------------
+    | Transacciones
+    |--------------------------------------------------------------------------
+    */
     Route::get('/transactions', [TransactionController::class, 'index']);
     Route::post('/transactions', [TransactionController::class, 'store']);
 
-    // Categorías y proveedores
+    /*
+    |--------------------------------------------------------------------------
+    | Categorías y proveedores
+    |--------------------------------------------------------------------------
+    */
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/suppliers', [SupplierController::class, 'index']);
 
-    // Dashboard
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard
+    |--------------------------------------------------------------------------
+    */
     Route::get('/dashboard/kpis', [DashboardController::class, 'kpis']);
     Route::get('/dashboard/sales-series', [DashboardController::class, 'salesSeries']);
     Route::get('/dashboard/expenses-by-category', [DashboardController::class, 'expensesByCategory']);
 
-    // Facturas
+    /*
+    |--------------------------------------------------------------------------
+    | Facturas
+    |--------------------------------------------------------------------------
+    */
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::post('/invoices', [InvoiceController::class, 'store']);
     Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'pay']);
+    Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'cancel']);
     Route::get('/invoices/upcoming', [InvoiceController::class, 'upcoming']);
+    Route::post('/invoices/refresh-statuses', [InvoiceController::class, 'refreshStatuses']);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lista de compras
+    |--------------------------------------------------------------------------
+    | Importante: /shopping-items/done debe ir antes de /shopping-items/{shoppingItem}
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/shopping-items', [ShoppingItemController::class, 'index']);
+    Route::post('/shopping-items', [ShoppingItemController::class, 'store']);
+    Route::patch('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'update']);
+    Route::delete('/shopping-items/done', [ShoppingItemController::class, 'clearDone']);
+    Route::delete('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'destroy']);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fiados
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/credits/customers', [CreditController::class, 'customers']);
+    Route::post('/credits/customers', [CreditController::class, 'storeCustomer']);
+
+    Route::get('/credits', [CreditController::class, 'index']);
+    Route::post('/credits', [CreditController::class, 'store']);
+    Route::post('/credits/{credit}/pay', [CreditController::class, 'pay']);
+    Route::get('/credits-summary', [CreditController::class, 'summary']);
 });
 
 /*
@@ -60,5 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
 */
 
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::post('/invoices/refresh-statuses', [InvoiceController::class, 'refreshStatuses']);
+    // Por ahora esta ruta también está arriba para usuarios autenticados.
+    // Si querés que SOLO el admin pueda refrescar estados, eliminá la ruta de arriba.
+    Route::post('/admin/invoices/refresh-statuses', [InvoiceController::class, 'refreshStatuses']);
 });

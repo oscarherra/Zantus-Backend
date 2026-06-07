@@ -2,21 +2,29 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Busca al usuario por su correo, si no existe lo crea con estos datos
         User::updateOrCreate(
             ['email' => 'admin@zantu.com'],
             [
                 'name' => 'Administrador',
-                'password' => Hash::make('Admin1234*'),
+                'password' => Hash::make('password'),
                 'role' => 'admin',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'trabajador@zantu.com'],
+            [
+                'name' => 'Trabajador de soda',
+                'password' => Hash::make('password'),
+                'role' => 'cashier',
             ]
         );
     }
